@@ -12,7 +12,7 @@ import { Send, Coins, ThumbsUp, ThumbsDown, Award, AlertTriangle } from "lucide-
 import { Progress } from "@/components/ui/progress"
 
 // Gemini API configuration
-const GEMINI_API_KEY = "AIzaSyAaZooWxlIEf6-_nI61YZyKDMHsn6lj4Nk"
+const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 const MODEL_NAME = "gemini-1.5-flash"
 
 export default function ChallengeMode() {
