@@ -1,48 +1,56 @@
-🤖 CHATBOT: Rishi Ka DSA Guru
-Welcome to Rishi Ka DSA Guru, your personal chatbot for mastering Data Structures and Algorithms (DSA), UPSC topics, relationship advice, gym motivation, and more — all in one interactive voice-assisted platform!
+# 🤖 CHATBOT: Rishi Ka DSA Guru
 
-Hosted at: chatwithrishi.netlify.app
+Welcome to **Rishi Ka DSA Guru**, your personal chatbot for mastering **Data Structures and Algorithms (DSA)**, **UPSC topics**, **relationship advice**, **gym motivation**, and more — all in one interactive voice-assisted platform!
 
-🚀 Features
-✅ Multi-mode Chat:
+🌐 **Hosted at:** [chatbotindia.netlify.app](https://chatbotindia.netlify.app)
 
-DSA Mode: Explains concepts like Rohit Negi with practical examples.
+---
 
-UPSC Mode: Detailed explanations on Indian history, polity, economics, and more.
+## 🚀 Features
 
-Love Mode: Humorous, witty relationship advice.
+✅ **Multi-mode Chat:**
 
-Gym Mode: Energetic gym trainer vibes with fitness tips.
+* **DSA Mode:** Explains concepts like Rohit Negi with practical examples.
+* **UPSC Mode:** Detailed explanations on Indian history, polity, economics, and more.
+* **Love Mode:** Humorous, witty relationship advice.
+* **Gym Mode:** Energetic gym trainer vibes with fitness tips.
 
-🎤 Voice Input & Output:
+🎤 **Voice Input & Output:**
 
-Record your question directly.
+* Record your question directly.
+* Listen to the response with Text-to-Speech support.
 
-Listen to the response with Text-to-Speech support.
+🌐 **Multi-language Accents:**
 
-🌐 Supports multi-language accents (Indian English, US English, Hindi input).
+* Supports Indian English, US English, and Hindi input.
 
-🎨 Clean, responsive UI built with Next.js, Tailwind CSS, and Radix UI.
+🎨 **Clean, Responsive UI:**
 
-🎉 Integrated confetti animations for fun interactions.
+* Built with Next.js, Tailwind CSS, and Radix UI.
 
-☁️ Deployed using Vercel with Google Gemini API integration.
+🎉 **Interactive Animations:**
 
-🛠️ Tech Stack
-Frontend: Next.js, React, TypeScript, Tailwind CSS
+* Integrated confetti animations for fun user experience.
 
-Voice: Web Speech API
+☁️ **Deployment:**
 
-Icons & UI: Radix UI, Lucide Icons
+* Deployed using **Vercel** with Google Gemini API integration.
 
-API: Google Gemini (Generative AI)
+---
 
-Deployment: Vercel
+## 🛠️ Tech Stack
 
-📂 Project Structure
-php
-Copy
-Edit
+* **Frontend:** Next.js, React, TypeScript, Tailwind CSS
+* **Voice Assistant:** Web Speech API
+* **UI Libraries:** Radix UI, Lucide Icons
+* **API Integration:** Google Gemini (Generative AI)
+* **Deployment Platform:** Vercel
+
+---
+
+## 📂 Project Structure
+
+```text
 ├── components      # UI Components (chat, buttons, tabs, etc.)
 ├── context         # Mode and challenge management
 ├── hooks           # Custom chat and voice hooks
@@ -51,59 +59,79 @@ Edit
 ├── styles          # Global styles
 ├── utils           # Helper functions (voice recognition, TTS)
 └── ...             # Config files, environment setup
-🧑‍💻 Getting Started
-1. Clone the Repository
-bash
-Copy
-Edit
+```
+
+---
+
+## 🧑‍💻 Getting Started
+
+### 1. Clone the Repository
+
+```bash
 git clone https://github.com/CodingEnthusiastic/CHATBOT_RISHI-KA-DSA-GURU.git
 cd CHATBOT_RISHI-KA-DSA-GURU
-2. Install Dependencies
-bash
-Copy
-Edit
-npm install
-3. Set Environment Variables
-Create a .env.local file:
+```
 
-bash
-Copy
-Edit
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
 NEXT_PUBLIC_GEMINI_API_KEY=your_google_gemini_api_key
 NEXT_PUBLIC_GEMINI_MODEL=gemini-1.5-flash
-4. Run the Development Server
-bash
-Copy
-Edit
+```
+
+### 4. Run the Development Server
+
+```bash
 npm run dev
-5. Build for Production
-bash
-Copy
-Edit
+```
+
+### 5. Build for Production
+
+```bash
 npm run build
 npm start
-🔑 Key Highlights
-🔒 Secure API key handling via environment variables.
+```
 
-🎙️ Voice-driven user experience.
+---
 
-🧩 Modular and scalable component structure.
+## 🔑 Key Highlights
 
-📱 Mobile-friendly responsive design.
+* 🔒 Secure API key handling via environment variables.
+* 🎙️ Voice-driven user experience.
+* 🧩 Modular and scalable component structure.
+* 📱 Mobile-friendly responsive design.
 
-📸 Screenshots
-(You can add screenshots here if you like.)
+---
 
-🌍 Live Demo
-chatwithrishi.netlify.app
+## 📸 Screenshots
 
-🙏 Acknowledgements
-Google Gemini API
+*(Add screenshots here to showcase the project UI)*
 
-Next.js by Vercel
+---
 
-Radix UI for accessible components
+## 🌍 Live Demo
 
-Lucide Icons
+👉 [chatbotindia.netlify.app](https://chatbotindia.netlify.app)
 
-⭐ If you like this project, give it a star!
+---
+
+## 🙏 Acknowledgements
+
+* Google Gemini API
+* Next.js by Vercel
+* Radix UI for accessible components
+* Lucide Icons
+
+---
+
+## ⭐ If you like this project, give it a star!
+
+---
