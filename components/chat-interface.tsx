@@ -15,6 +15,58 @@ import ModeHeader from "@/components/mode-header"
 import ChallengeMode from "@/components/challenge-mode"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
+// Declare global interfaces for TypeScript
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
 // Define the Message type
 interface Message {
   role: string
@@ -25,6 +77,7 @@ interface Message {
 }
 
 // Gemini API configuration
+
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY
 const MODEL_NAME = "gemini-1.5-flash"
 
@@ -39,6 +92,10 @@ export default function ChatInterface() {
   const [isVoiceSubmission, setIsVoiceSubmission] = useState(false)
   const [voiceLanguage, setVoiceLanguage] = useState("en-US")
   const [speechLanguage, setSpeechLanguage] = useState("en-US")
+  const [recognitionInstance, setRecognitionInstance] = useState<any>(null)
+  const [recognitionError, setRecognitionError] = useState<string | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const [interimTranscript, setInterimTranscript] = useState("")
 
   // Independent chat state for each mode
   const [modeMessages, setModeMessages] = useState<{
@@ -103,17 +160,105 @@ export default function ChatInterface() {
     }
   }
 
+  // Replace the toggleRecording function with this simpler version
   const toggleRecording = () => {
-    if (!isVoiceInput) return
-
+    if (!isVoiceInput) return;
+    
+    console.log("Toggle recording:", !isRecording);
+    
     if (!isRecording) {
-      setTranscript("")
-      setInput("")
-      setIsRecording(true)
-      setIsVoiceSubmission(true)
+      // Starting recording
+      setTranscript("");
+      setInput("");
+      setInterimTranscript("");
+      setRecognitionError(null);
+      
+      try {
+        // Create a new instance each time to ensure fresh permission request
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognitionAPI) {
+          setRecognitionError("Speech recognition not supported in this browser");
+          return;
+        }
+        
+        const recognition = new SpeechRecognitionAPI();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = voiceLanguage;
+        
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          let interimResult = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimResult += event.results[i][0].transcript;
+            }
+          }
+          
+          if (finalTranscript) {
+            setTranscript(prev => prev + ' ' + finalTranscript);
+            setInput(prev => prev + ' ' + finalTranscript);
+          }
+          
+          setInterimTranscript(interimResult);
+        };
+        
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          setRecognitionError(`Error: ${event.error}`);
+          setIsRecording(false);
+          setIsListening(false);
+        };
+        
+        recognition.onend = () => {
+          console.log("Recognition ended");
+          setIsListening(false);
+          
+          if (isRecording) {
+            try {
+              recognition.start();
+              setIsListening(true);
+            } catch (err) {
+              console.error("Failed to restart recognition:", err);
+              setIsRecording(false);
+            }
+          }
+        };
+        
+        // Start recognition immediately
+        recognition.start();
+        setIsListening(true);
+        setRecognitionInstance(recognition);
+        
+      } catch (error) {
+        console.error("Error starting speech recognition:", error);
+        setRecognitionError("Failed to start speech recognition");
+        setIsRecording(false);
+        return;
+      }
     } else {
-      setIsRecording(false)
+      // Stopping recording
+      try {
+        if (recognitionInstance) {
+          recognitionInstance.stop();
+          setIsListening(false);
+          
+          // If we have transcript, automatically submit
+          if (transcript.trim()) {
+            setTimeout(() => handleSubmit(new Event("submit") as any), 300);
+          }
+        }
+      } catch (err) {
+        console.error("Error stopping recognition:", err);
+      }
     }
+    
+    setIsRecording(!isRecording);
+    setIsVoiceSubmission(true);
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -152,9 +297,10 @@ export default function ChatInterface() {
     try {
       // Use Gemini API directly
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`
-      //console.log("Deploy API Key =", GEMINI_API_KEY);
-      //console.log("Request URL:", API_URL);
-      //console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+      console.log(API_URL);
+      console.log(process.env);
+      let check=true;
+      console.log(check);
       const requestBody = {
         contents: [
           ...messages.map((msg) => ({
@@ -170,7 +316,7 @@ export default function ChatInterface() {
           parts: [{ text: systemInstruction }],
         },
       }
-      //console.log("reached here");
+      console.log(check);
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -178,13 +324,13 @@ export default function ChatInterface() {
         },
         body: JSON.stringify(requestBody),
       })
-     // console.log(response.ok);
+      console.log(check);
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`)
       }
-
+      console.log(check);
       const data = await response.json()
-     // console.log(data);
+
       if (
         data.candidates &&
         data.candidates.length > 0 &&
@@ -199,7 +345,7 @@ export default function ChatInterface() {
         if (mode === "default" && containsHindi(aiResponse)) {
           englishContent = await getEnglishVersion(aiResponse)
         }
-
+        console.log(check);
         // Add AI response
         const aiMessage = {
           role: "assistant",
@@ -207,19 +353,19 @@ export default function ChatInterface() {
           id: Date.now().toString(),
           englishContent: englishContent,
         }
-
+        console.log(check);
         setModeMessages((prev) => ({
           ...prev,
           [mode]: [...(prev[mode] || []), aiMessage],
         }))
-
+        console.log(check);
         if (isVoiceOutput) {
           speakText(aiResponse, englishContent)
         }
       }
     } catch (error) {
       console.error("Error fetching response:", error)
-      //console.log(error);
+     // console.log(check);
       // Add error message
       const errorMessage = {
         role: "assistant",
@@ -335,61 +481,56 @@ export default function ChatInterface() {
     }
   }
 
-  // Speech recognition setup
+  // Start/stop recognition based on isRecording state
   useEffect(() => {
-    if ((typeof window !== "undefined" && "SpeechRecognition" in window) || "webkitSpeechRecognition" in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-      const recognition = new SpeechRecognition()
-
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.lang = voiceLanguage
-
-      // Handle results - update transcript in real-time
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map((result) => result[0])
-          .map((result) => result.transcript)
-          .join("")
-
-        setTranscript(transcript)
-        setInput(transcript)
-      }
-
-      // Handle end of speech
-      recognition.onend = () => {
-        // If we're still in recording mode and have a transcript, submit it
-        if (isRecording && transcript.trim()) {
-          setIsRecording(false)
-          // Small delay to ensure the final transcript is captured
-          setTimeout(() => {
-            handleSubmit(new Event("submit") as any)
-          }, 500)
+    if (!recognitionInstance) return;
+    
+    if (isRecording) {
+      setRecognitionError(null);
+      setTranscript("");
+      setInput("");
+      setInterimTranscript("");
+      try {
+        recognitionInstance.stop();
+        setTimeout(() => {
+          try {
+            recognitionInstance.start();
+            setIsListening(true);
+          } catch (err) {
+            console.error("Failed to start recognition:", err);
+            setRecognitionError("Failed to start speech recognition");
+          }
+        }, 100);
+      } catch (err) {
+        console.error("Recognition error:", err);
+        try {
+          recognitionInstance.start();
+          setIsListening(true);
+        } catch (innerErr) {
+          console.error("Failed to recover:", innerErr);
+          setRecognitionError("Speech recognition failed to start");
         }
       }
-
-      // Handle errors
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error", event.error)
-        setIsRecording(false)
-      }
-
-      if (isRecording) {
-        recognition.start()
-      } else {
-        recognition.stop()
-      }
-
-      return () => {
-        recognition.stop()
-      }
+    } else if (isListening) {
+      recognitionInstance.stop();
+      setIsListening(false);
     }
-  }, [isRecording, transcript, voiceLanguage])
+  }, [isRecording, recognitionInstance]);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  // Language change handler
+  const handleLanguageChange = (languageCode: string) => {
+    setVoiceLanguage(languageCode);
+    // For most languages, use the same language for speech output
+    // For special cases like Hindi, maintain English speech output
+    if (!languageCode.startsWith('hi')) {
+      setSpeechLanguage(languageCode);
+    }
+    
+    // Update recognition language if instance exists
+    if (recognitionInstance) {
+      recognitionInstance.lang = languageCode;
+    }
+  }
 
   // Welcome message when entering a mode
   useEffect(() => {
@@ -461,14 +602,21 @@ export default function ChatInterface() {
 
           <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             {isRecording && (
-              <div className="absolute top-0 left-0 right-0 z-10 bg-red-500/10 border border-red-500/30 rounded-md p-2 flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse mr-2"></span>
-                  <span className="text-sm font-medium text-red-400">Recording...</span>
+              <div className="absolute top-0 left-0 right-0 z-10 bg-red-500/10 border border-red-500/30 rounded-md p-2 flex flex-col">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse mr-2"></span>
+                    <span className="text-sm font-medium text-red-400">Recording... ({voiceLanguage.split('-')[0]})</span>
+                  </div>
+                  {recognitionError && (
+                    <span className="text-xs text-red-500">{recognitionError}</span>
+                  )}
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Speak clearly, will auto-send when you pause
-                </span>
+                {interimTranscript && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                    {interimTranscript}
+                  </div>
+                )}
               </div>
             )}
             <div className="relative flex-grow">
@@ -492,29 +640,29 @@ export default function ChatInterface() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setVoiceLanguage("en-US")
-                        setSpeechLanguage("en-US")
-                      }}
-                    >
+                    <DropdownMenuItem onClick={() => handleLanguageChange("en-US")}>
                       English (US)
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setVoiceLanguage("en-IN")
-                        setSpeechLanguage("en-IN")
-                      }}
-                    >
+                    <DropdownMenuItem onClick={() => handleLanguageChange("en-IN")}>
                       English (Indian)
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setVoiceLanguage("hi-IN")
-                        setSpeechLanguage("en-US") // Keep speech in English
-                      }}
-                    >
-                      Hindi input, English speech
+                    <DropdownMenuItem onClick={() => handleLanguageChange("hi-IN")}>
+                      Hindi
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageChange("es-ES")}>
+                      Spanish
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageChange("fr-FR")}>
+                      French
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageChange("de-DE")}>
+                      German
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageChange("ja-JP")}>
+                      Japanese
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageChange("zh-CN")}>
+                      Chinese (Simplified)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
