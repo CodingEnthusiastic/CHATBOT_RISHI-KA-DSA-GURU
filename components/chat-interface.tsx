@@ -152,7 +152,9 @@ export default function ChatInterface() {
     try {
       // Use Gemini API directly
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`
-
+      console.log("Deploy API Key =", GEMINI_API_KEY);
+      console.log("Request URL:", API_URL);
+      console.log("Request Body:", JSON.stringify(requestBody, null, 2));
       const requestBody = {
         contents: [
           ...messages.map((msg) => ({
@@ -168,7 +170,7 @@ export default function ChatInterface() {
           parts: [{ text: systemInstruction }],
         },
       }
-
+      console.log("reached here");
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -176,13 +178,13 @@ export default function ChatInterface() {
         },
         body: JSON.stringify(requestBody),
       })
-
+      console.log(response.ok);
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`)
       }
 
       const data = await response.json()
-
+      console.log(data);
       if (
         data.candidates &&
         data.candidates.length > 0 &&
@@ -217,7 +219,7 @@ export default function ChatInterface() {
       }
     } catch (error) {
       console.error("Error fetching response:", error)
-
+      console.log(error);
       // Add error message
       const errorMessage = {
         role: "assistant",
